@@ -1,5 +1,5 @@
 PIT analysis
-########
+############
 
 This library provides tools to analize PIT income for JSTs in Poland.
 
