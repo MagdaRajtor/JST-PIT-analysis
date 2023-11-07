@@ -1,12 +1,13 @@
 import pandas as pd
 
 def ppl_income_w(data,file):
-    """średni dochód opodatkowany mieszkańca województwa; jedynie za 2020 rok, bo tylko takie dane dotyczące ludności"""
-    opod = 0.85 # z danych GUS, 85% społeczeństwa jest w wieku po- i produkcyjnym (płaci podatki)
-    mult = 0.016 # 1.6% podatku PIT zebranego w województwie trafia do niego jako dochód
+    """średni dochód opodatkowany mieszkańca województwa (mean taxable income per województwo resident); 
+    data available only for 2020"""
+    opod = 0.85 # from GUS data: 85% of society pays taxes (is of working or retirement age)
+    mult = 0.016 # 1.6% of PIT tax from a województwo becomes its income
     df = pd.read_excel(file, skiprows=8)
     data["ludność"] = df.iloc[:, 1]
-    # d2020: cała kwota z podatku PIT zebranego z danej JST podzielona przez część społeczeństwa, która płaci podatki
+    # d2020: whole PIT from a given JST, divided by the part of residents that pay taxes
     data["d2020"] = (data["2020"]//mult).div((data.ludność*opod), axis=0)
     data["d2020"] = round(data["d2020"], 1)
     return data
@@ -14,13 +15,13 @@ def ppl_income_w(data,file):
 def ppl_income_p(data,file):
     """średni dochód opodatkowany mieszkańca powiatu lub miasta na prawach powiatu"""
     opod = 0.85
-    mult = 0.1025  # 10.25% podatku PIT zebranego w powiecie trafia do niego jako dochód
-    df = pd.read_excel(file, skiprows=9, dtype={"Unnamed: 1": str})  # znów żeby zachować zera w kodach
+    mult = 0.1025  # 10.25% of PIT tax from a powiat becomes its income
+    df = pd.read_excel(file, skiprows=9, dtype={"Unnamed: 1": str})
     df = df.iloc[:, [1, 2]]
     pom = []
     for ind in data.index:
         code = data["kod"][ind][:4]
-        found = df.loc[df["Unnamed: 1"] == code]  # wiersz z danym kodem terytorialnym
+        found = df.loc[df["Unnamed: 1"] == code]  # kod terytorialny (territorial code)
         pom.append(found.iloc[0, 1])
     data["ludność"] = pom
     data["d2020"] = (data["2020"] // mult).div((data.ludność * opod), axis=0)
@@ -31,16 +32,15 @@ def ppl_income_g(data, file, woj):
     """średni dochód opodatkowany mieszkańca gminy"""
     opod = 0.85
     mult = 0.3934
-    # przekazujemy gminy tylko dla 1 województwa
+    # gminy are given for a single województwo
     data = data.loc[data["województwo"] == woj]
     if woj == "śląskie":
-        woj = "śląske" # taki błąd w Excelu
+        woj = "śląske" # fixing an error in original data
     df = pd.read_excel(file, skiprows=7, dtype={"Unnamed: 1": str}, sheet_name=woj.capitalize())
     df = df.iloc[:, [1, 2]]
     df.columns = ["k", "l"]
-    df = df[df.k != '       '] # nie było NaN a właśnie takie spacje, więc do usunięcia
-    df["Unnamed: 1"] = df["k"].astype(str).str[:6] # kody 6-cyfrowe zamiast 7
-    #dalej analogicznie jak przy powiatach:
+    df = df[df.k != '       '] # such spaces instead of NaNs used in data
+    df["Unnamed: 1"] = df["k"].astype(str).str[:6] # 6-digit instead of 7-digit codes
     pom = []
     for ind in data.index:
         code = data["kod"][ind][:6]
